@@ -15,16 +15,11 @@ server.listen(8124);
 var socket = io.listen(server);
 
 socket.on('connection', function(client) {
-  // Keep track of who has connected.
   people[client.sessionId] = client;
   
   client.on('message', function(data) {
-    console.log(data);
-    
     switch (data.action) {
-      // Create a new game.
       case 'create':
-        // Create the new game.
         var game = new zombie.Game(data.name, data.type, data.outbreak, data.lat, data.lng);
         game.user(this.sessionId, {lat: data.lat, lng: data.lng});
         games[game.name] = game;
@@ -43,7 +38,6 @@ socket.on('connection', function(client) {
 setTimeout(function update() {
   for (var name in games) {
     // Move zombies.
-    console.log("Update: " + name);
     games[name].update();
     // Get the current state of the game.
     var state = games[name].state();

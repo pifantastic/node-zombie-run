@@ -88,7 +88,7 @@ Zombie.prototype = {
   },
   
   move: function(lat, lng) {
-    if (this.aware) {
+    if (lat && lng) {
       // Move towards people
     } else {
       this.vector[0] = (parseInt(Math.random() * 3, 10) - 1) / 10000;
