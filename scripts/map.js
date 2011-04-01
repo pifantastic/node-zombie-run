@@ -16,7 +16,7 @@ Map.prototype = {
   user: null,
   
   defaults: {
-    zoom: 15,
+    zoom: 16,
     center: new google.maps.LatLng(0, 0),
     mapTypeId: google.maps.MapTypeId.ROADMAP
   },
@@ -38,24 +38,30 @@ Map.prototype = {
       var lat = state.zombies[zombie].lat,
           lng = state.zombies[zombie].lng,
           position = new google.maps.LatLng(lat, lng);
+          
       if (zombie in this._zombies) {
         this._zombies[zombie].setPosition(position);
+        this._zombies[zombie].setIcon(this.icon(state.zombies[zombie].target ? 'zombie!' : 'zombie'));
       } else {
-        this._zombies[zombie] = this.marker(lat, lng, 'zombie');
+        this._zombies[zombie] = this.marker(lat, lng, state.zombies[zombie].target ? 'zombie!' : 'zombie');
       }
     }
   },
   
+  icon: function(type) {
+    var icons = {
+      'zombie!': '/img/bullet_red.png',
+      'zombie': '/img/bullet_green.png',
+      'player': '/img/bullet_black.png',
+    };
+    
+    return icons[type] || '/img/bullet_blue.png';
+  },
+  
   // Create a map marker with the given position and icon.
   marker: function(lat, lng, type) {
-    var image, position, marker;
-    switch (type) {
-      case 'zombie': image = '/img/bullet_red.png'; break;
-      case 'player': image = '/img/bullet_green.png'; break;
-      default: image = '/img/bullet_blue.png';
-    }
-    position = new google.maps.LatLng(lat, lng);
-    return new google.maps.Marker({ position: position, map: this.map, icon: image });
+    var position = new google.maps.LatLng(lat, lng);
+    return new google.maps.Marker({ position: position, map: this.map, icon: this.icon(type) });
   },
   
   // Clear all markers from the map.

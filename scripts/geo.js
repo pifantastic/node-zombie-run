@@ -1,17 +1,20 @@
 
-var d2r = function(degrees) {
+RADIUS_OF_EARTH = 6378137;
+
+var deg2rad = function(degrees) {
   return Math.PI * (degrees / 180);
 }
 
-var distance = function(aLat, aLng, bLat, bLng) {
-  var R = 6378100,
-      dLat = d2r(bLat - aLat),
-      dLon = d2r(bLng - aLng),
-      c = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(d2r(aLat)) * Math.cos(d2r(bLat)) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-          
-  return R * 2 * Math.atan2(Math.sqrt(c), Math.sqrt(1 - c));
+var distance = function(aLat, aLon, bLat, bLon) {
+  var dlat = aLat - bLat,
+      dlon = aLon - bLon;
+      
+  a = Math.pow(Math.sin(deg2rad(dlat / 2)), 2) + 
+      Math.cos(deg2rad(aLat)) *
+      Math.cos(deg2rad(bLat)) *
+      Math.pow(Math.sin(deg2rad(dlon / 2)), 2);
+      
+  return RADIUS_OF_EARTH * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 exports.distance = distance;

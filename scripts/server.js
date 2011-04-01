@@ -45,6 +45,11 @@ setTimeout(function update() {
     for (var sid in games[name].users) {
       people[sid].send({ action: 'update', state: state });
     }
+    // Remove this game from the update queue if it's over.
+    if (state.status & (zombie.GAME_LOSE ^ zombie.GAME_WIN)) {
+      console.log('Game over: ' + name);
+      delete games[name];
+    }
   }
   setTimeout(update, 1500);
 }, 1500);

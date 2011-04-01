@@ -1,10 +1,8 @@
 
 var geo = require('./geo');
 
-RADIUS_OF_EARTH_METERS = 6378100
-TRIGGER_DISTANCE_METERS = 15
-ZOMBIE_VISION_DISTANCE_METERS = 200
-PLAYER_VISION_DISTANCE_METERS = 500
+
+PLAYER_VISION_DISTANCE = 500
 MAX_TIME_INTERVAL_SECS = 60 * 10  // 10 minutes
 ZOMBIE_SPEED_VARIANCE = 0.2
 MIN_NUM_ZOMBIES = 20
@@ -13,9 +11,16 @@ MAX_ZOMBIE_CLUSTER_SIZE = 4
 MAX_ZOMBIE_CLUSTER_RADIUS = 30
 DEFAULT_ZOMBIE_SPEED = 3 * 0.447  // x miles per hour in meters per second
 DEFAULT_ZOMBIE_DENSITY = 20.0  // zombies per square kilometer
+
 OUTBREAKS = { early: 20, late: 100, pandemic: 1000 };
 
 ZOMBIE_GUID = 1;
+ZOMBIE_ATTACK_DISTANCE = 15;
+ZOMBIE_VISION_DISTANCE = 200
+
+GAME_IN_PROGRESS = 0;
+GAME_WIN = 1;
+GAME_LOSE = 2;
 
 var Game = function(name, type, outbreak, lat, lng) {
   return this.init(name, type, outbreak, lat, lng);
@@ -31,6 +36,7 @@ Game.prototype = {
     this.lng = lng;
     this.users = {};
     this.zombies = {};
+    this.status = GAME_IN_PROGRESS;
     
     for (var x = 0; x < OUTBREAKS[this.outbreak]; x++) {
       this.zombies[ZOMBIE_GUID] = new Zombie(ZOMBIE_GUID++, this.lat, this.lng);
@@ -48,17 +54,21 @@ Game.prototype = {
     for (var zombie in this.zombies) {
       zombie = this.zombies[zombie];
       if (zombie.target) {
-        // Is this victim still visible?
-        if (zombie.canSee(this.users[zombie.target].lat, this.users[zombie.target].lng)) {
+        var distance = zombie.distance(zombie.target.lat, zombie.target.lng);
+        if (distance <= ZOMBIE_ATTACK_DISTANCE) {
+          this.status = GAME_LOSE;
+        } else if (distance > ZOMBIE_VISION_DISTANCE) {
           zombie.target = false;
         }
       } else {
         // Look for victims.
         for (var sid in this.users) {
-          if (zombie.canSee(this.users[sid].lat, this.users[sid].lng)) {
-            zombie.target = sid;
+          var distance = zombie.distance(this.users[sid].lat, this.users[sid].lng);
+          if (distance <= ZOMBIE_VISION_DISTANCE) {
+            zombie.target = this.users[sid];
+            break;
           }
-        } 
+        }
       }
       zombie.move();
     }
@@ -66,7 +76,8 @@ Game.prototype = {
   
   state: function() {
     return {
-      zombies: this.zombies
+      zombies: this.zombies,
+      status: this.status
     }
   }
 
@@ -80,21 +91,25 @@ Zombie.prototype = {
 
   init: function(id, lat, lng) {
     this.id = id;
-    this.lat = lat + (Math.random() * 5 - 1) / 100;
-    this.lng = lng + (Math.random() * 5 - 1) / 100;
+    this.lat = lat + (Math.random() * 4 - 1) / 100;
+    this.lng = lng + (Math.random() * 4 - 1) / 100;
     this.target = false;
     this.vector = [0, 0];
+    this.speed = 10; // meters per second
     this.move();
   },
   
-  move: function(lat, lng) {
-    if (lat && lng) {
-      // Move towards people
+  move: function() {
+    if (this.target) {
+      var distance = geo.distance(this.lat, this.lng, this.target.lat, this.target.lng),
+          magnitude = 1 - ((distance - this.speed) / distance);
+      this.vector[0] = (this.target.lat - this.lat) * magnitude;
+      this.vector[1] = (this.target.lng - this.lng) * magnitude;
     } else {
-      this.vector[0] = (parseInt(Math.random() * 3, 10) - 1) / 10000;
-      this.vector[1] = (parseInt(Math.random() * 3, 10) - 1) / 10000;
-      this.position(this.lat + this.vector[0], this.lng + this.vector[1]);
+      this.vector[0] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
+      this.vector[1] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
     }
+    this.position(this.lat + this.vector[0], this.lng + this.vector[1]);
   },
   
   position: function(lat, lng) {
@@ -105,11 +120,15 @@ Zombie.prototype = {
     return { lat: this.lat, lng: this.lng };
   },
   
-  canSee: function(lat, lng) {
-    return geo.distance(this.lat, this.lng, lat, lng) < ZOMBIE_VISION_DISTANCE_METERS;
+  distance: function(lat, lng) {
+    return geo.distance(this.lat, this.lng, lat, lng);
   }
 
 };
 
 exports.Game = Game;
 exports.Zombie = Zombie;
+
+exports.GAME_IN_PROGRESS;
+exports.GAME_WIN;
+exports.GAME_LOSE;

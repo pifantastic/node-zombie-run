@@ -68,7 +68,13 @@
     
     socket.on('message', function(data) {
       switch (data.action) {
-        case 'update': map.update(data.state);
+        case 'update': 
+          if (data.state.status) {
+            alert('Game over!');
+            socket.disconnect();
+          } else {
+            map.update(data.state);
+          }
         default:
           console.log(data);
       }
