@@ -93,8 +93,6 @@
         map = null,
         // User's position.
         position = null,
-        // User's session id.
-        sid = null,
         // Current game.
         game = null;
     
@@ -149,28 +147,22 @@
       console.log(data);
       
       switch (data.action) {
-        // Save the user's session id.
-        case 'session':
-          sid = data.sid;
-          break;
-        
         // Update the state of the current game.
         case 'update': 
           if (data.state.status) {
             alert('Game over!');
           } else {
-            map.sid = data.sid;
             map.update(data.state);
           }
           break;
         
         // Get a list of joinable games.
         case 'list':
-          var $list = $('#list').html('');
+          var html = '';
           for (var x = 0; x < data.games.length; x++) {
-            $list.append('<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>');
+            html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
           }
-          $list.listview('refresh');
+          $('#list').html(html).listview('refresh');
           break;
       }
     });

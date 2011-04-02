@@ -56,7 +56,7 @@ Map.prototype = {
       if (user in this._players) {
         this._players[user].setPosition(position);
       } else {
-        this._players[user] = this.marker(lat, lng, user == this.sid ? 'user' : 'player');
+        this._players[user] = this.marker(lat, lng, user == state.sid ? 'user' : 'player');
       }
     }
   },

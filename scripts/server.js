@@ -1,10 +1,14 @@
 
 var http = require('http'),
     io = require('socket.io'),
+    logger = require('./logger.js'),
     geo = require('./geo.js'),
     zombie = require('./zombie.js'),
     people = {},
     games = {};
+
+logger.on = true;
+logger.LEVEL = logger.DEBUG;
 
 server = http.createServer(function(req, res) {
  res.writeHead(200, {'Content-Type': 'text/html'});
@@ -17,20 +21,19 @@ var socket = io.listen(server);
 socket.on('connection', function(client) {
   people[client.sessionId] = client;
   
-  // Let the user know their session id.
-  client.send({ action: 'session', sid: this.sessionId });
-  
   client.on('message', function(data) {
     switch (data.action) {
       case 'create':
         var game = new zombie.Game(data.name, data.type, data.outbreak, data.lat, data.lng);
         game.user(this.sessionId, {lat: data.lat, lng: data.lng});
         games[game.name] = game;
+        logger.log(logger.NOTICE, 'Game created: ' + game.name);
         break;
 
       case 'join':
         if (data.name in games) {
           games[data.name].user(this.sessionId, {lat: data.lat, lng: data.lng});
+          logger.log(logger.NOTICE, 'User ' + this.sessionId + ' joined ' + data.name);
         }
         break;
       
@@ -59,11 +62,11 @@ setTimeout(function update() {
     }
     // Remove this game from the update queue if it's over.
     if (state.status & (zombie.GAME_LOSE ^ zombie.GAME_WIN)) {
-      console.log('Game over: ' + name);
+      logger.log(logger.NOTICE, 'Game over: ' + name);
       delete games[name];
     }
   }
   setTimeout(update, 1500);
 }, 1500);
 
-console.log('Server running at http://127.0.0.1:8124/');
+logger.log(logger.NOTICE, 'Server running at http://127.0.0.1:8124/');
