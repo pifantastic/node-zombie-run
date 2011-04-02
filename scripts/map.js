@@ -13,6 +13,7 @@ Map.prototype = {
   // Player markers.
   _players: {},
   
+  sid: null,
   user: null,
   
   defaults: {
@@ -44,6 +45,18 @@ Map.prototype = {
         this._zombies[zombie].setIcon(this.icon(state.zombies[zombie].target ? 'zombie!' : 'zombie'));
       } else {
         this._zombies[zombie] = this.marker(lat, lng, state.zombies[zombie].target ? 'zombie!' : 'zombie');
+      }
+    }
+    
+    for (var user in state.users) {
+      var lat = state.users[user].lat,
+          lng = state.users[user].lng,
+          position = new google.maps.LatLng(lat, lng);
+          
+      if (user in this._players) {
+        this._players[user].setPosition(position);
+      } else {
+        this._players[user] = this.marker(lat, lng, user == this.sid ? 'user' : 'player');
       }
     }
   },

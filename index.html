@@ -8,7 +8,34 @@
   </style>
 </head>
 <body>
-  <!--div id="create" data-role="page">
+  <div id="home" data-role="page">
+  	<div data-role="header">
+  		<h1>Node! Zombie Run!</h1>
+  	</div>
+  	<div data-role="content">	
+  	  <ul data-role="listview" data-theme="g">
+  	    <li><a href="#create">Create Game</a></li>
+    	  <li><a href="#join">Join Game</a></li>
+  	  </ul>
+  	</div>
+  	<div data-role="footer">
+  		<h4>&copy; ur brainz</h4>
+  	</div>
+  </div>
+  
+  <div id="join" data-role="page">
+  	<div data-role="header">
+  		<h1>Join a party and FIGHT!</h1>
+  	</div>
+  	<div data-role="content">
+  	  <ul id="list" data-role="listview" data-theme="g"></ul>
+  	</div>
+  	<div data-role="footer">
+  		<h4>&copy; ur brainz</h4>
+  	</div>
+  </div>
+  
+  <div id="create" data-role="page">
   	<div data-role="header">
   		<h1>Zombiez</h1>
   	</div>
@@ -41,7 +68,7 @@
   	<div data-role="footer">
   		<h4>&copy; ur brainz</h4>
   	</div>
-  </div-->
+  </div>
   
   <div id="game" data-role="page">
   	<div data-role="header">
@@ -61,22 +88,90 @@
   <script src="scripts/socket.io.js"></script>
   <script src="scripts/map.js"></script>
   <script type="text/javascript">
-    var GAME = 'test';
+    var socket = new io.Socket('127.0.0.1', {port: 8124}),
+        // Game map.
+        map = null,
+        // User's position.
+        position = null,
+        // User's session id.
+        sid = null,
+        // Current game.
+        game = null;
     
-    var socket = new io.Socket('127.0.0.1', {port: 8124});
-    var map = new Map('#map');
+    // Join a game.
+    $('#list a').live('click', function() {
+      game = $(this).data('game');
+      socket.send({
+        action: 'join',
+        name: game,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      });
+      $.mobile.changePage('#game');
+    });
     
+    // Start a new game.
+    $('#start').click(function() {
+      var user = $('#user').val(),
+          name = $('#name').val(),
+          type = $('#type').val(),
+          outbreak = $('#outbreak').val();
+      
+      game = name;
+      
+      socket.send({
+        action: 'create',
+        user: user,
+        name: name,
+        type: type,
+        outbreak: outbreak,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      });
+      
+      $.mobile.changePage('#game');        
+    });
+    
+    // Show joinable games.
+    $('#join').live('pageshow', function(event, ui) {
+      socket.send({ action: 'list' });
+    });
+    
+    // Show current game.
+    $('#game').live('pageshow', function(event, ui) {
+      map = new Map('#map');
+      if (position)
+        map.center(position.coords.latitude, position.coords.longitude);
+    });
+    
+    // Handle socket messages from server.
     socket.on('message', function(data) {
+      console.log(data);
+      
       switch (data.action) {
+        // Save the user's session id.
+        case 'session':
+          sid = data.sid;
+          break;
+        
+        // Update the state of the current game.
         case 'update': 
           if (data.state.status) {
             alert('Game over!');
-            socket.disconnect();
           } else {
+            map.sid = data.sid;
             map.update(data.state);
           }
-        default:
-          console.log(data);
+          break;
+        
+        // Get a list of joinable games.
+        case 'list':
+          var $list = $('#list').html('');
+          for (var x = 0; x < data.games.length; x++) {
+            $list.append('<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>');
+          }
+          $list.listview('refresh');
+          break;
       }
     });
     
@@ -86,25 +181,22 @@
     
     socket.connect();
     
-    navigator.geolocation.getCurrentPosition(function(position) {
-      socket.send({
-        action: 'create',
-        name: GAME,
-        type: 3,
-        outbreak: 'late',
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      });
-    });
-    
-    navigator.geolocation.watchPosition(function(position) {
-      map.center(position.coords.latitude, position.coords.longitude);
-      socket.send({ 
-        action: 'ping', 
-        game: GAME, 
-        lat: position.coords.latitude, 
-        lng: position.coords.longitude 
-      });
+    // Watch user's location.
+    navigator.geolocation.watchPosition(function(pos) {
+      position = pos;
+      
+      // Update the user's location on the map.
+      if (map) map.center(position.coords.latitude, position.coords.longitude);
+      
+      // If the user is in a game, update the server with their position.
+      if (game) {
+        socket.send({ 
+          action: 'ping', 
+          game: game, 
+          lat: position.coords.latitude, 
+          lng: position.coords.longitude 
+        }); 
+      }
     }, function() {
       console.log('fffuuuuuuu, error getting position');
     });

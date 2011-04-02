@@ -18,9 +18,9 @@ ZOMBIE_GUID = 1;
 ZOMBIE_ATTACK_DISTANCE = 15;
 ZOMBIE_VISION_DISTANCE = 200
 
-GAME_IN_PROGRESS = 0;
-GAME_WIN = 1;
-GAME_LOSE = 2;
+var GAME_IN_PROGRESS = 0;
+var GAME_WIN = 1;
+var GAME_LOSE = 2;
 
 var Game = function(name, type, outbreak, lat, lng) {
   return this.init(name, type, outbreak, lat, lng);
@@ -77,6 +77,7 @@ Game.prototype = {
   state: function() {
     return {
       zombies: this.zombies,
+      users: this.users,
       status: this.status
     }
   }
@@ -129,6 +130,6 @@ Zombie.prototype = {
 exports.Game = Game;
 exports.Zombie = Zombie;
 
-exports.GAME_IN_PROGRESS;
-exports.GAME_WIN;
-exports.GAME_LOSE;
+exports.GAME_IN_PROGRESS = GAME_IN_PROGRESS;
+exports.GAME_WIN = GAME_WIN;
+exports.GAME_LOSE = GAME_LOSE;
