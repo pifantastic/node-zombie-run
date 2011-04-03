@@ -78,7 +78,7 @@
   
   <div id="game" data-role="page">
   	<div data-role="header">
-  		<h1>Loading</h1>
+  		<h1>Loading...</h1>
   	</div>
   	<div data-role="content">	
       <div id="map"></div>
@@ -141,8 +141,7 @@
     // Show current game.
     $('#game').live('pageshow', function(event, ui) {
       map = new Map('#map');
-      if (position)
-        map.center(position.coords.latitude, position.coords.longitude);
+      map.center(position.coords.latitude, position.coords.longitude);
     });
     
     // Show joinable games.
@@ -171,7 +170,14 @@
         // Update the state of the current game.
         case 'update': 
           if (data.state.status) {
-            alert('Game over!');
+            switch (data.state.status) {
+              case 1:
+                alert("Game over! You survived!");
+                break;
+              case 2:
+                alert("Game over! You're brains are zombie food.");
+                break;
+            }
           } else {
             map.update(data.state, data.sid);
           }
@@ -193,8 +199,11 @@
     });
     
     socket.on('disconnect', function(){
-      alert("You've been disconnected from the server D:");
-      $.mobile.changePage('#home');
+      $.mobile.pageLoading();
+    });
+    
+    socket.on('reconnect', function() {
+      $.mobile.pageLoading(true);
     });
     
     socket.connect();

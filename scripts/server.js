@@ -50,7 +50,7 @@ socket.on('connection', function(client) {
   
   client.on('disconnect', function(data) {
     delete people[this.sessionId];
-    logger.log(logger.NOTICE, 'User ' + this.sessionId + ' left');
+    logger.log(logger.NOTICE, 'User ' + this.sessionId + ' disconnected');
   });
   
 });
@@ -69,6 +69,7 @@ setTimeout(function update() {
         // Get rid of disconnected users.
         // INTERESTING THOUGHT: Turn them into zombies?!
         games[name].removeUser(sid);
+        logger.log(logger.NOTICE, 'User ' + sid + ' left ' + data.name);
       }
     }
     // Remove this game from the update queue if it's over.
