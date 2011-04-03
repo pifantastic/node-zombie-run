@@ -50,6 +50,10 @@ Game.prototype = {
     return this.users[sid];
   },
   
+  removeUser: function(sid) {
+    delete this.users[sid];
+  },
+  
   update: function() {
     for (var zombie in this.zombies) {
       zombie = this.zombies[zombie];

@@ -16,7 +16,7 @@ server = http.createServer(function(req, res) {
 });
 server.listen(8124);
 
-var socket = io.listen(server);
+var socket = io.listen(server, { log: function() {} });
 
 socket.on('connection', function(client) {
   people[client.sessionId] = client;
@@ -25,7 +25,7 @@ socket.on('connection', function(client) {
     switch (data.action) {
       case 'create':
         var game = new zombie.Game(data.name, data.type, data.outbreak, data.lat, data.lng);
-        game.user(this.sessionId, {lat: data.lat, lng: data.lng});
+        game.user(this.sessionId, {name: data.user, lat: data.lat, lng: data.lng});
         games[game.name] = game;
         logger.log(logger.NOTICE, 'Game created: ' + game.name);
         break;
@@ -48,6 +48,11 @@ socket.on('connection', function(client) {
     }
   });
   
+  client.on('disconnect', function(data) {
+    delete people[this.sessionId];
+    logger.log(logger.NOTICE, 'User ' + this.sessionId + ' left');
+  });
+  
 });
 
 setTimeout(function update() {
@@ -58,7 +63,13 @@ setTimeout(function update() {
     var state = games[name].state();
     // Send the game state to all players.
     for (var sid in games[name].users) {
-      people[sid].send({ action: 'update', state: state, sid: sid });
+      if (sid in people) {
+        people[sid].send({ action: 'update', state: state, sid: sid });
+      } else {
+        // Get rid of disconnected users.
+        // INTERESTING THOUGHT: Turn them into zombies?!
+        games[name].removeUser(sid);
+      }
     }
     // Remove this game from the update queue if it's over.
     if (state.status & (zombie.GAME_LOSE ^ zombie.GAME_WIN)) {

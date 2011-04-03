@@ -29,11 +29,10 @@ var log = function(level, message) {
     return;
     
   var date = new Date,
-      levels = { EMERGENCY: 'Emergency', ALERT: 'Alert', CRITICAL: 'Critical',
-        ERROR: 'Error', WARNING: 'Warning', NOTICE: 'Notice', INFO: 'Info', DEBUG: 'Debug' };
-  
+      levels = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
+      
   level = levels[level] || 'Unknown';
-  console.log(date.toDateString() + ': ' + level + ': ' + message);
+  console.log(date.toString() + ': ' + level + ': ' + message);
 };
 
 exports.EMERGENCY = EMERGENCY;

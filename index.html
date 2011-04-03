@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Zombiez!</title>
+  <script src="scripts/modernizr-1.7.min.js"></script>
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a3/jquery.mobile-1.0a3.min.css" />
   <style type="text/css">
     #map { height: 500px; width: 100% }
@@ -13,7 +14,12 @@
   		<h1>Node! Zombie Run!</h1>
   	</div>
   	<div data-role="content">	
-  	  <ul data-role="listview" data-theme="g">
+  	  <div id="dep-check">
+  	    <p>Making sure you're equipped to play...</p>
+  	    <a href="#" id="dep-location" data-role="button" data-icon="delete">Location</a>
+    	  <a href="#" id="dep-socket" data-role="button" data-icon="delete">Server Connection</a>
+  	  </div>
+  	  <ul id="menu" data-role="listview" data-theme="g" style="display: none">
   	    <li><a href="#create">Create Game</a></li>
     	  <li><a href="#join">Join Game</a></li>
   	  </ul>
@@ -86,6 +92,7 @@
   <script src="http://code.jquery.com/mobile/1.0a3/jquery.mobile-1.0a3.min.js"></script>
   <script src="http://maps.google.com/maps/api/js?sensor=true"></script>
   <script src="scripts/socket.io.js"></script>
+  <script src="scripts/env.js"></script>
   <script src="scripts/map.js"></script>
   <script type="text/javascript">
     var socket = new io.Socket('127.0.0.1', {port: 8124}),
@@ -96,43 +103,39 @@
         // Current game.
         game = null;
     
-    // Join a game.
-    $('#list a').live('click', function() {
-      game = $(this).data('game');
-      socket.send({
-        action: 'join',
-        name: game,
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
+    // Can't start a game until location is determined
+    // and socket is connected.
+    env
+      .deps('location', 'socket')
+      .change(function(dep, state) {
+        $('#dep-' + dep + ' .ui-icon-delete')
+          .removeClass('ui-icon-delete').addClass('ui-icon-check');
+        })
+      .ready(function() {
+        $('#dep-check').hide();
+        $('#menu').show();
       });
-      $.mobile.changePage('#game');
-    });
     
     // Start a new game.
-    $('#start').click(function() {
+    $('#start').live('click', function() {
       var user = $('#user').val(),
-          name = $('#name').val(),
+          game = $('#name').val(),
           type = $('#type').val(),
           outbreak = $('#outbreak').val();
-      
-      game = name;
       
       socket.send({
         action: 'create',
         user: user,
-        name: name,
+        name: game,
         type: type,
         outbreak: outbreak,
         lat: position.coords.latitude,
         lng: position.coords.longitude
       });
       
+      $('#name').val('');
+      $('#game h1').text(name);
       $.mobile.changePage('#game');        
-    });
-    
-    // Show joinable games.
-    $('#join').live('pageshow', function(event, ui) {
-      socket.send({ action: 'list' });
     });
     
     // Show current game.
@@ -142,24 +145,42 @@
         map.center(position.coords.latitude, position.coords.longitude);
     });
     
+    // Show joinable games.
+    $('#join').live('pageshow', function(event, ui) {
+      socket.send({ action: 'list' });
+      $('#list').html('<li>Getting a list of nearby games from the server...</li>')
+        .listview('refresh');
+    });
+
+    // Join a game.
+    $('#list a').live('click', function() {
+      game = $(this).data('game');
+      socket.send({
+        action: 'join',
+        name: game,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      });
+      $('#game h1').text(game);
+      $.mobile.changePage('#game');
+    });
+    
     // Handle socket messages from server.
     socket.on('message', function(data) {
-      console.log(data);
-      
       switch (data.action) {
         // Update the state of the current game.
         case 'update': 
           if (data.state.status) {
             alert('Game over!');
           } else {
-            map.update(data.state);
+            map.update(data.state, data.sid);
           }
           break;
         
         // Get a list of joinable games.
         case 'list':
           var html = '';
-          for (var x = 0; x < data.games.length; x++) {
+          for (var x = 0, len = data.games.length; x < len; x++) {
             html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
           }
           $('#list').html(html).listview('refresh');
@@ -167,32 +188,38 @@
       }
     });
     
+    socket.on('connect', function() {
+      env.dep('socket', true);
+    });
+    
     socket.on('disconnect', function(){
-      console.log('fffuuuuuuu, server disconnected');
+      alert("You've been disconnected from the server D:");
+      $.mobile.changePage('#home');
     });
     
     socket.connect();
     
-    // Watch user's location.
-    navigator.geolocation.watchPosition(function(pos) {
-      position = pos;
-      
-      // Update the user's location on the map.
-      if (map) map.center(position.coords.latitude, position.coords.longitude);
-      
-      // If the user is in a game, update the server with their position.
-      if (game) {
-        socket.send({ 
-          action: 'ping', 
-          game: game, 
-          lat: position.coords.latitude, 
-          lng: position.coords.longitude 
-        }); 
-      }
-    }, function() {
-      console.log('fffuuuuuuu, error getting position');
-    });
-    
+    if (Modernizr.geolocation) {
+      navigator.geolocation.watchPosition(function(pos) {
+        position = pos;
+
+        // Update the user's location on the map.
+        if (map)
+          map.center(position.coords.latitude, position.coords.longitude);
+
+        // If the user is in a game, update the server with their position.
+        if (game && socket.connected) {
+          socket.send({ 
+            action: 'ping', 
+            game: game, 
+            lat: position.coords.latitude, 
+            lng: position.coords.longitude 
+          }); 
+        }
+
+        env.dep('location', true);
+      });
+    }
   </script>
 </body>
 </html>

@@ -7,34 +7,25 @@ var Map = function(selector, options) {
 
 Map.prototype = {
   
-  // Zombie markers.
-  _zombies: {},
-  
-  // Player markers.
-  _players: {},
-  
-  sid: null,
-  user: null,
-  
   defaults: {
     zoom: 16,
     center: new google.maps.LatLng(0, 0),
     mapTypeId: google.maps.MapTypeId.ROADMAP
   },
   
-  settings: {},
-  
   // Create the map.
   init: function(selector, options) {
-    options = options || {};
+    this._zombies = {};
+    this._players = {};
+    this.user = null;
     this.selector = selector;
-    this.settings = $.merge(this.defaults, options);
+    this.settings = $.merge(this.defaults, options || {});
     this.map = new google.maps.Map($(this.selector).get(0), this.settings);
     return this;
   },
   
   // Update the entities on the map.
-  update: function(state) {
+  update: function(state, sid) {
     for (var zombie in state.zombies) {
       var lat = state.zombies[zombie].lat,
           lng = state.zombies[zombie].lng,
@@ -49,6 +40,9 @@ Map.prototype = {
     }
     
     for (var user in state.users) {
+      if (user == sid)
+        continue;
+        
       var lat = state.users[user].lat,
           lng = state.users[user].lng,
           position = new google.maps.LatLng(lat, lng);
@@ -56,7 +50,7 @@ Map.prototype = {
       if (user in this._players) {
         this._players[user].setPosition(position);
       } else {
-        this._players[user] = this.marker(lat, lng, user == state.sid ? 'user' : 'player');
+        this._players[user] = this.marker(lat, lng, 'player');
       }
     }
   },
