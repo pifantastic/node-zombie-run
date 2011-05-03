@@ -108,7 +108,7 @@ Zombie.prototype = {
     interval /= 1000;
     if (this.target) {
       var distance = geo.distance(this.lat, this.lng, this.target.lat, this.target.lng),
-          magnitude = 1 - ((distance - (this.speed * interval) / distance);
+          magnitude = 1 - ((distance - (this.speed * interval)) / distance);
       this.vector[0] = (this.target.lat - this.lat) * magnitude;
       this.vector[1] = (this.target.lng - this.lng) * magnitude;
     } else {
