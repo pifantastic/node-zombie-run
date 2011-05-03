@@ -53,8 +53,8 @@
         <label for="name">Name your party</label>
         <input type="text" name="name" id="name" value="" />
         
-        <label for="type" class="select">Zombie type</label>
-        <select name="type" id="type">
+        <label for="speed" class="select">Zombie type</label>
+        <select name="speed" id="speed">
           <option value="3">Night of the Living Dead</option>
           <option value="5">Resident Evil</option>
           <option value="10">28 Days Later</option>
@@ -120,21 +120,21 @@
     $('#start').live('click', function() {
       var user = $('#user').val(),
           game = $('#name').val(),
-          type = $('#type').val(),
+          speed = $('#speed').val(),
           outbreak = $('#outbreak').val();
       
       socket.send({
         action: 'create',
         user: user,
         name: game,
-        type: type,
+        speed: speed,
         outbreak: outbreak,
         lat: position.coords.latitude,
         lng: position.coords.longitude
       });
       
       $('#name').val('');
-      $('#game h1').text(name);
+      $('#game h1').text(game);
       $.mobile.changePage('#game');        
     });
     
