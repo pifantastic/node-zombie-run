@@ -24,15 +24,19 @@ var DEBUG = 7;
 
 var LEVEL = DEBUG;
 
+var levels = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
+
 var log = function(level, message) {
-  if (level > LEVEL)
+  if (arguments.length === 1) {
+    message = level;
+    level = NOTICE;
+  }
+
+  if (level > LEVEL) {
     return;
-    
-  var date = new Date,
-      levels = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
-      
-  level = levels[level] || 'Unknown';
-  console.log(date.toString() + ': ' + level + ': ' + message);
+  }
+  
+  console.log((new Date).toString() + ': ' + levels[level] + ': ' + message);
 };
 
 exports.EMERGENCY = EMERGENCY;
@@ -46,3 +50,4 @@ exports.DEBUG = DEBUG;
 
 exports.on = on;
 exports.log = log;
+exports.LEVEL = LEVEL;

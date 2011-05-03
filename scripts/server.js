@@ -19,7 +19,7 @@ server = http.createServer(function(req, res) {
  res.writeHead(200, {'Content-Type': 'text/html'});
  res.end('<h1>Hello world</h1>');
 });
-server.listen(8124);
+server.listen(GAME.port);
 
 var socket = io.listen(server, { log: function() {} });
 
@@ -89,4 +89,4 @@ setTimeout(function update() {
   setTimeout(update, duration > GAME.interval ? 0 : GAME.interval - duration);
 }, GAME.interval);
 
-logger.log(logger.NOTICE, 'Server running at http://127.0.0.1:8124/');
+logger.log(logger.NOTICE, 'Server running at http://127.0.0.1:' + GAME.port + '/');
