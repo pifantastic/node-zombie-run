@@ -29,7 +29,7 @@ socket.on('connection', function(client) {
   client.on('message', function(data) {
     switch (data.action) {
       case 'create':
-        var game = new zombie.Game(data.name, data.type, data.outbreak, data.lat, data.lng);
+        var game = new zombie.Game(data.name, data.speed, data.outbreak, data.lat, data.lng);
         game.user(this.sessionId, {name: data.user, lat: data.lat, lng: data.lng});
         games[game.name] = game;
         logger.log(logger.NOTICE, 'Game created: ' + game.name);
@@ -76,7 +76,7 @@ setTimeout(function update() {
         // Get rid of disconnected users.
         // INTERESTING THOUGHT: Turn them into zombies?!
         games[name].removeUser(sid);
-        logger.log(logger.NOTICE, 'User ' + sid + ' left ' + data.name);
+        logger.log(logger.NOTICE, 'User ' + sid + ' left ' + name);
       }
     }
     // Remove this game from the update queue if it's over.

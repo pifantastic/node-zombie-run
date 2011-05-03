@@ -22,15 +22,15 @@ var GAME_IN_PROGRESS = 0;
 var GAME_WIN = 1;
 var GAME_LOSE = 2;
 
-var Game = function(name, type, outbreak, lat, lng) {
-  return this.init(name, type, outbreak, lat, lng);
+var Game = function(name, speed, outbreak, lat, lng) {
+  return this.init(name, speed, outbreak, lat, lng);
 };
 
 Game.prototype = {
   
-  init: function(name, type, outbreak, lat, lng) {
+  init: function(name, speed, outbreak, lat, lng) {
     this.name = name;
-    this.type = type;
+    this.speed = speed;
     this.outbreak = outbreak;
     this.lat = lat;
     this.lng = lng;
@@ -39,7 +39,7 @@ Game.prototype = {
     this.status = GAME_IN_PROGRESS;
     
     for (var x = 0; x < OUTBREAKS[this.outbreak]; x++) {
-      this.zombies[ZOMBIE_GUID] = new Zombie(ZOMBIE_GUID++, this.lat, this.lng);
+      this.zombies[ZOMBIE_GUID] = new Zombie(ZOMBIE_GUID++, this.speed, this.lat, this.lng);
     }
   },
   
@@ -88,19 +88,19 @@ Game.prototype = {
 
 };
 
-var Zombie = function(id, lat, lng) {
-  return this.init(id, lat, lng);
+var Zombie = function(id, speed, lat, lng) {
+  return this.init(id, speed, lat, lng);
 };
 
 Zombie.prototype = {
 
-  init: function(id, lat, lng) {
+  init: function(id, speed, lat, lng) {
     this.id = id;
     this.lat = lat + (Math.random() * 4 - 1) / 100;
     this.lng = lng + (Math.random() * 4 - 1) / 100;
     this.target = false;
     this.vector = [0, 0];
-    this.speed = 10; // meters per second
+    this.speed = speed; // meters per second
     this.move();
   },
   
@@ -112,7 +112,7 @@ Zombie.prototype = {
       this.vector[0] = (this.target.lat - this.lat) * magnitude;
       this.vector[1] = (this.target.lng - this.lng) * magnitude;
     } else {
-      // TODO: Document/tweak this magic numbers. 
+      // TODO: Document/tweak these magic numbers. 
       this.vector[0] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
       this.vector[1] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
     }
