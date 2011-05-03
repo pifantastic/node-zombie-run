@@ -10,6 +10,11 @@ var http = require('http'),
 logger.on = true;
 logger.LEVEL = logger.DEBUG;
 
+var GAME = {
+  interval: 1000,
+  port: 8124
+}
+
 server = http.createServer(function(req, res) {
  res.writeHead(200, {'Content-Type': 'text/html'});
  res.end('<h1>Hello world</h1>');
@@ -55,10 +60,12 @@ socket.on('connection', function(client) {
   
 });
 
+// The game loop
 setTimeout(function update() {
+  var toime = new Date;
   for (var name in games) {
     // Move zombies.
-    games[name].update();
+    games[name].update(GAME.interval);
     // Get the current state of the game.
     var state = games[name].state();
     // Send the game state to all players.
@@ -73,12 +80,13 @@ setTimeout(function update() {
       }
     }
     // Remove this game from the update queue if it's over.
-    if (state.status & (zombie.GAME_LOSE ^ zombie.GAME_WIN)) {
+    if (state.status & (zombie.GAME_LOSE | zombie.GAME_WIN)) {
       logger.log(logger.NOTICE, 'Game over: ' + name);
       delete games[name];
     }
   }
-  setTimeout(update, 1500);
-}, 1500);
+  var duration = new Date - toime;
+  setTimeout(update, duration > GAME.interval ? 0 : GAME.interval - duration);
+}, GAME.interval);
 
 logger.log(logger.NOTICE, 'Server running at http://127.0.0.1:8124/');

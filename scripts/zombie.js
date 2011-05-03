@@ -54,7 +54,7 @@ Game.prototype = {
     delete this.users[sid];
   },
   
-  update: function() {
+  update: function(interval) {
     for (var zombie in this.zombies) {
       zombie = this.zombies[zombie];
       if (zombie.target) {
@@ -74,7 +74,7 @@ Game.prototype = {
           }
         }
       }
-      zombie.move();
+      zombie.move(interval);
     }
   },
   
@@ -104,13 +104,15 @@ Zombie.prototype = {
     this.move();
   },
   
-  move: function() {
+  move: function(interval) {
+    interval /= 1000;
     if (this.target) {
       var distance = geo.distance(this.lat, this.lng, this.target.lat, this.target.lng),
-          magnitude = 1 - ((distance - this.speed) / distance);
+          magnitude = 1 - ((distance - (this.speed * interval) / distance);
       this.vector[0] = (this.target.lat - this.lat) * magnitude;
       this.vector[1] = (this.target.lng - this.lng) * magnitude;
     } else {
+      // TODO: Document/tweak this magic numbers. 
       this.vector[0] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
       this.vector[1] = (parseInt(Math.random() * 3, 10) - 1) / 20000;
     }
