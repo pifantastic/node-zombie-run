@@ -2,21 +2,21 @@ var http    = require('http');
 var io      = require('socket.io');
 var express = require('express');
 
-var logger  = require(__dirname + '/lib/logger');
-var geo     = require(__dirname + '/lib/geo');
-var zombie  = require(__dirname + '/lib/zombie');
+var config  = require(__dirname + '/config');     // Various configurations.
+var logger  = require(__dirname + '/lib/logger'); // Simple logging utility.
+var geo     = require(__dirname + '/lib/geo');    // Utility for making geo calculations.
+var zombie  = require(__dirname + '/lib/zombie'); // Core game library.
 
+// All people that have connected to the server.
 var people = {};
+
+// All active games.
 var games = {};
 
-logger.on = true;
-logger.LEVEL = logger.DEBUG;
+// Turn on logging in dev mode.
+logger.on = config.get('environment') == 'dev';
 
-var GAME = {
-  interval: 1000,
-  port: 8124
-};
-
+// Create the application server.
 var app = express.createServer();
 
 app.configure(function() {
@@ -28,12 +28,12 @@ app.configure(function() {
   app.use(app.router);
 });
 
-app.listen(GAME.port);
+app.listen(config.get('server.port'));
 
-var socket = io.listen(app/*, { log: function() {} }*/);
+var socket = io.listen(app, { log: function() {} });
 
+// Socket events.
 socket.on('connection', function(client) {
-  // TODO: This shouldn't be necessary, list of clients held by the server.
   people[client.sessionId] = client;
   
   logger.log(logger.NOTICE, 'User ' + client.sessionId + ' connected');
@@ -78,22 +78,25 @@ socket.on('connection', function(client) {
   
 });
 
-// The game loop
+// The game loop.
 setTimeout(function update() {
   var toime = new Date;
+  
   for (var name in games) {
+    var game = games[name];
+    
     // Move zombies.
-    var state = games[name].update(GAME.interval);
+    var state = game.update(config.get('game.interval'));
     
     // Send the game state to all players.
-    for (var sid in games[name].users) {
+    for (var sid in game.users) {
       if (sid in people) {
         people[sid].send({ action: 'update', state: state, sid: sid });
-
-      // Get rid of disconnected users.
-      // INTERESTING THOUGHT: Turn them into zombies?!
-      } else {
-        games[name].removeUser(sid);
+      }
+      else {
+        // Get rid of disconnected users.
+        // INTERESTING THOUGHT: Turn them into zombies?!
+        game.removeUser(sid);
         logger.log(logger.NOTICE, 'User ' + sid + ' left ' + name);
       }
     }
@@ -107,7 +110,11 @@ setTimeout(function update() {
   
   // Compensate for loop processing time when firing next game update.
   var duration = new Date - toime;
-  setTimeout(update, duration > GAME.interval ? 0 : GAME.interval - duration);
-}, GAME.interval);
+  var interval = config.get('game.interval');
+  setTimeout(update, duration > interval ? 0 : interval - duration);
+  
+}, config.get('game.interval'));
 
-logger.log(logger.NOTICE, 'Server running at http://127.0.0.1:' + GAME.port + '/');
+logger.log(logger.NOTICE, 
+  'Server running in ' + config.get('environment') + ' mode ' +
+  'at http://' + config.get('server.host') + ':' + config.get('server.port') + '/');

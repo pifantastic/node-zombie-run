@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>Zombiez!</title>
-  <script src="scripts/modernizr-1.7.min.js"></script>
+  <script src="js/modernizr-1.7.min.js"></script>
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a3/jquery.mobile-1.0a3.min.css" />
   <style type="text/css">
     #map { height: 500px; width: 100% }
@@ -95,7 +95,7 @@
   <script src="js/env.js"></script>
   <script src="js/map.js"></script>
   <script type="text/javascript">
-    var socket = new io.Socket('127.0.0.1', {port: 8124}),
+    var socket = new io.Socket('127.0.0.1', {port: 1337}),
         // Game map.
         map = null,
         // User's position.
