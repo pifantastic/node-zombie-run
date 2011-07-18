@@ -34,7 +34,8 @@ Map.prototype = {
       if (zombie in this._zombies) {
         this._zombies[zombie].setPosition(position);
         this._zombies[zombie].setIcon(this.icon(state.zombies[zombie].target ? 'zombie!' : 'zombie'));
-      } else {
+      }
+      else {
         this._zombies[zombie] = this.marker(lat, lng, state.zombies[zombie].target ? 'zombie!' : 'zombie');
       }
     }
@@ -49,7 +50,8 @@ Map.prototype = {
           
       if (user in this._players) {
         this._players[user].setPosition(position);
-      } else {
+      }
+      else {
         this._players[user] = this.marker(lat, lng, 'player');
       }
     }
@@ -57,12 +59,12 @@ Map.prototype = {
   
   icon: function(type) {
     var icons = {
-      'zombie!': '/img/bullet_red.png',
-      'zombie': '/img/bullet_green.png',
-      'player': '/img/bullet_black.png',
+      'zombie!': '/img/zombie!.png',
+      'zombie': '/img/zombie.png',
+      'player': '/img/user_gray.png',
     };
     
-    return icons[type] || '/img/bullet_blue.png';
+    return icons[type] || '/img/user_green.png';
   },
   
   // Create a map marker with the given position and icon.
@@ -88,7 +90,8 @@ Map.prototype = {
     // Draw the user on the map.
     if (!this.user) {
       this.user = this.marker(lat, lng, 'user');
-    } else {
+    }
+    else {
       this.user.setPosition(position);
     }
   }

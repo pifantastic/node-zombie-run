@@ -3,7 +3,7 @@
 <head>
   <title>Zombiez!</title>
   <script src="js/modernizr-1.7.min.js"></script>
-  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a3/jquery.mobile-1.0a3.min.css" />
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0b1/jquery.mobile-1.0b1.min.css" />
   <style type="text/css">
     #map { height: 500px; width: 100% }
   </style>
@@ -29,9 +29,9 @@
   	</div>
   </div>
   
-  <div id="join" data-role="page">
+  <div id="join" data-role="page" data-add-back-btn="true">
   	<div data-role="header">
-  		<h1>Join a party and FIGHT!</h1>
+  		<h1>Join a party!</h1>
   	</div>
   	<div data-role="content">
   	  <ul id="list" data-role="listview" data-theme="g"></ul>
@@ -41,9 +41,9 @@
   	</div>
   </div>
   
-  <div id="create" data-role="page">
+  <div id="create" data-role="page" data-add-back-btn="true">
   	<div data-role="header">
-  		<h1>Zombiez</h1>
+  		<h1>Create a new game!</h1>
   	</div>
   	<div data-role="content">	
       <div data-role="fieldcontain">
@@ -54,14 +54,14 @@
         <input type="text" name="name" id="name" value="" />
         
         <label for="speed" class="select">Zombie type</label>
-        <select name="speed" id="speed">
+        <select name="speed" id="speed" data-native-menu="false">
           <option value="3">Night of the Living Dead</option>
           <option value="5">Resident Evil</option>
           <option value="10">28 Days Later</option>
         </select>
         
-        <label for="outbreak" class="select">Outreak</label>
-        <select name="outbreak" id="outbreak">
+        <label for="outbreak" class="select">Outbreak</label>
+        <select name="outbreak" id="outbreak" data-native-menu="false">
           <option value="early">Early infestation</option>
           <option value="late">Late infestation</option>
           <option value="pandemic">Pandemic</option>
@@ -76,7 +76,7 @@
   	</div>
   </div>
   
-  <div id="game" data-role="page">
+  <div id="game" data-role="page" data-add-back-btn="true">
   	<div data-role="header">
   		<h1>Loading...</h1>
   	</div>
@@ -88,8 +88,8 @@
   	</div>
   </div>
   
-  <script src="http://code.jquery.com/jquery-1.5.min.js"></script>
-  <script src="http://code.jquery.com/mobile/1.0a3/jquery.mobile-1.0a3.min.js"></script>
+  <script src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
+  <script src="http://code.jquery.com/mobile/1.0b1/jquery.mobile-1.0b1.min.js"></script>
   <script src="http://maps.google.com/maps/api/js?sensor=true"></script>
   <script src="js/socket.io.js"></script>
   <script src="js/env.js"></script>
@@ -102,6 +102,10 @@
         position = null,
         // Current game.
         game = null;
+    
+    var strip = function(str) {
+      return str.replace(/<\w+(\s+("[^"]*"|'[^']*'|[^>])+)?>|<\/\w+>/gi, '');
+    };
     
     // Can't start a game until location is determined
     // and socket is connected.
@@ -126,7 +130,7 @@
       socket.send({
         action: 'create',
         user: user,
-        name: game,
+        name: strip(game),
         speed: speed,
         outbreak: outbreak,
         lat: position.coords.latitude,
@@ -141,6 +145,7 @@
     // Show current game.
     $('#game').live('pageshow', function(event, ui) {
       map = new Map('#map');
+      map.clear();
       map.center(position.coords.latitude, position.coords.longitude);
     });
     
@@ -153,10 +158,12 @@
 
     // Join a game.
     $('#list a').live('click', function() {
+      var name = prompt("Give yourself a name:", "");
       game = $(this).data('game');
       socket.send({
         action: 'join',
         name: game,
+        user: name,
         lat: position.coords.latitude,
         lng: position.coords.longitude
       });
@@ -178,7 +185,8 @@
                 alert("Game over! Your brains are zombie food.");
                 break;
             }
-          } else {
+          }
+          else {
             map.update(data.state, data.sid);
           }
           break;
@@ -186,8 +194,13 @@
         // Get a list of joinable games.
         case 'list':
           var html = '';
-          for (var x = 0, len = data.games.length; x < len; x++) {
-            html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
+          if (data.games.length) {
+            for (var x = 0, len = data.games.length; x < len; x++) {
+              html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
+            } 
+          }
+          else {
+            html = '<li>No games found :(</li>';
           }
           $('#list').html(html).listview('refresh');
           break;

@@ -42,8 +42,22 @@ socket.on('connection', function(client) {
     switch (data.action) {
       // A user is creating a new game.
       case 'create':
-        var game = new zombie.Game(data.name, data.speed, data.outbreak, data.lat, data.lng);
-        game.user(this.sessionId, { name: data.user, lat: data.lat, lng: data.lng });
+        // Create the game.
+        var game = new zombie.Game(data);
+        
+        for (name in games) {
+          if (this.sessionId in games[name].users) {
+            delete games[name].users[this.sessionId];
+          }
+        }
+        
+        // Add the creator to the list of users.
+        game.users[this.sessionId] = new zombie.User({
+          sid: this.sessionId,
+          name: data.user,
+          lat: data.lat,
+          lng: data.lng
+        });
         games[game.name] = game;
         logger.log(logger.NOTICE, 'Game created: ' + game.name);
         break;
@@ -51,7 +65,17 @@ socket.on('connection', function(client) {
       // A user is joining an existing game.
       case 'join':
         if (data.name in games) {
-          games[data.name].user(this.sessionId, { lat: data.lat, lng: data.lng });
+          for (name in games) {
+            if (this.sessionId in games[name].users) {
+              delete games[name].users[this.sessionId];
+            }
+          }
+          games[data.name].users[this.sessionId] = new zombie.User({
+            sid: this.sessionId,
+            name: data.user,
+            lat: data.lat,
+            lng: data.lng
+          });
           logger.log(logger.NOTICE, 'User ' + this.sessionId + ' joined ' + data.name);
         }
         break;
@@ -65,7 +89,7 @@ socket.on('connection', function(client) {
       // A user is updating their position within a game.
       case 'ping':
         if (data.game in games) {
-          games[data.game].user(this.sessionId, { lat: data.lat, lng: data.lng });
+          games[data.game].users[this.sessionId].position(data.lat, data.lng);
         }
         break;
     }
@@ -96,7 +120,7 @@ setTimeout(function update() {
       else {
         // Get rid of disconnected users.
         // INTERESTING THOUGHT: Turn them into zombies?!
-        game.removeUser(sid);
+        delete game.users[sid];
         logger.log(logger.NOTICE, 'User ' + sid + ' left ' + name);
       }
     }
@@ -116,5 +140,5 @@ setTimeout(function update() {
 }, config.get('game.interval'));
 
 logger.log(logger.NOTICE, 
-  'Server running in ' + config.get('environment') + ' mode ' +
-  'at http://' + config.get('server.host') + ':' + config.get('server.port') + '/');
+  'Server running in ' + config.get('environment') + ' mode at ' + 
+  'http://' + config.get('server.host') + ':' + config.get('server.port') + '/');

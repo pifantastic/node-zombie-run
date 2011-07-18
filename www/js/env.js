@@ -21,7 +21,8 @@
       if (dep in this._deps) {
         if (arguments.length === 1) {
           return this._deps[dep];
-        } else {
+        }
+        else {
           this._deps[dep] = !!state;
           this._change(dep, !!state);
           for (var dep in this._deps) {
