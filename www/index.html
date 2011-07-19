@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Zombiez!</title>
-  <script src="js/modernizr-1.7.min.js"></script>
     <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0b1/jquery.mobile-1.0b1.min.css" />
   <style type="text/css">
     #map { height: 500px; width: 100% }
@@ -91,17 +90,17 @@
   <script src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
   <script src="http://code.jquery.com/mobile/1.0b1/jquery.mobile-1.0b1.min.js"></script>
   <script src="http://maps.google.com/maps/api/js?sensor=true"></script>
-  <script src="js/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="js/env.js"></script>
   <script src="js/map.js"></script>
   <script type="text/javascript">
-    var socket = new io.Socket('127.0.0.1', {port: 1337}),
-        // Game map.
-        map = null,
-        // User's position.
-        position = null,
-        // Current game.
-        game = null;
+    var socket = io.connect('http://127.0.0.1:1337');
+    // Game map.
+    var map = null;
+    // User's position.
+    var position = null;
+    // Current game.
+    var game = null;
     
     var strip = function(str) {
       return str.replace(/<\w+(\s+("[^"]*"|'[^']*'|[^>])+)?>|<\/\w+>/gi, '');
@@ -127,8 +126,7 @@
           speed = $('#speed').val(),
           outbreak = $('#outbreak').val();
       
-      socket.send({
-        action: 'create',
+      socket.emit('create', {
         user: user,
         name: strip(game),
         speed: speed,
@@ -151,17 +149,16 @@
     
     // Show joinable games.
     $('#join').live('pageshow', function(event, ui) {
-      socket.send({ action: 'list' });
+      socket.emit('list');
       $('#list').html('<li>Getting a list of nearby games from the server...</li>')
         .listview('refresh');
     });
 
     // Join a game.
     $('#list a').live('click', function() {
-      var name = prompt("Give yourself a name:", "");
+      var name = prompt("Give yourself a name:", "Anonymous Coward");
       game = $(this).data('game');
-      socket.send({
-        action: 'join',
+      socket.emit('join', {
         name: game,
         user: name,
         lat: position.coords.latitude,
@@ -171,40 +168,23 @@
       $.mobile.changePage('#game');
     });
     
-    // Handle socket messages from server.
-    socket.on('message', function(data) {
-      switch (data.action) {
-        // Update the state of the current game.
-        case 'update': 
-          if (data.state.status) {
-            switch (data.state.status) {
-              case 1:
-                alert("Game over! You survived!");
-                break;
-              case 2:
-                alert("Game over! Your brains are zombie food.");
-                break;
-            }
-          }
-          else {
-            map.update(data.state, data.sid);
-          }
-          break;
-        
-        // Get a list of joinable games.
-        case 'list':
-          var html = '';
-          if (data.games.length) {
-            for (var x = 0, len = data.games.length; x < len; x++) {
-              html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
-            } 
-          }
-          else {
-            html = '<li>No games found :(</li>';
-          }
-          $('#list').html(html).listview('refresh');
-          break;
+    socket.on('update', function(data) {
+      switch (data.state.status) {
+        case 1:  alert("Game over! You survived!"); break;
+        case 2:  alert("Game over! Your brains are zombie food."); break;
+        default: if (map) map.update(data.state, data.sid);
       }
+    });
+
+    socket.on('list', function(data) {
+      var html = '<li>No games found :(</li>';
+      if (data.games.length) {
+        html = '';
+        for (var x = 0, len = data.games.length; x < len; x++) {
+          html += '<li><a href="#" data-game="' + data.games[x] + '">' + data.games[x] + '</a></li>';
+        } 
+      }
+      $('#list').html(html).listview('refresh');
     });
     
     socket.on('connect', function() {
@@ -219,29 +199,24 @@
       $.mobile.pageLoading(true);
     });
     
-    socket.connect();
-    
-    if (Modernizr.geolocation) {
-      navigator.geolocation.watchPosition(function(pos) {
-        position = pos;
+    navigator.geolocation.watchPosition(function(pos) {
+      position = pos;
 
-        // Update the user's location on the map.
-        if (map)
-          map.center(position.coords.latitude, position.coords.longitude);
+      // Update the user's location on the map.
+      if (map)
+        map.center(position.coords.latitude, position.coords.longitude);
 
-        // If the user is in a game, update the server with their position.
-        if (game && socket.connected) {
-          socket.send({ 
-            action: 'ping', 
-            game: game, 
-            lat: position.coords.latitude, 
-            lng: position.coords.longitude 
-          }); 
-        }
+      // If the user is in a game, update the server with their position.
+      if (game && socket.connected) {
+        socket.emit('ping', {
+          game: game, 
+          lat: position.coords.latitude, 
+          lng: position.coords.longitude 
+        }); 
+      }
 
-        env.dep('location', true);
-      });
-    }
+      env.dep('location', true);
+    });
   </script>
 </body>
 </html>

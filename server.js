@@ -7,9 +7,6 @@ var logger  = require(__dirname + '/lib/logger'); // Simple logging utility.
 var geo     = require(__dirname + '/lib/geo');    // Utility for making geo calculations.
 var zombie  = require(__dirname + '/lib/zombie'); // Core game library.
 
-// All people that have connected to the server.
-var people = {};
-
 // All active games.
 var games = {};
 
@@ -30,82 +27,82 @@ app.configure(function() {
 
 app.listen(config.get('server.port'));
 
-var socket = io.listen(app, { log: function() {} });
+var io = io.listen(app);
 
 // Socket events.
-socket.on('connection', function(client) {
-  people[client.sessionId] = client;
+io.sockets.on('connection', function(socket) {
+  logger.log(logger.NOTICE, 'User ' + socket.id + ' connected');
   
-  logger.log(logger.NOTICE, 'User ' + client.sessionId + ' connected');
+  socket.on('create', function(data) {
+    // Create the game.
+    var game = new zombie.Game(data);
+    
+    // Remove this user from any other games.
+    for (name in games) {
+      if (socket.id in games[name].users) {
+        delete games[name].users[socket.id];
+      }
+    }
+    
+    // Add the creator to the list of users.
+    game.users[socket.id] = new zombie.User({
+      sid: socket.id,
+      name: data.user,
+      lat: data.lat,
+      lng: data.lng
+    });
+    
+    games[game.name] = game;
+    logger.log(logger.NOTICE, 'Game created: ' + game.name);
+  });
+        
+  // A user is joining an existing game.
+  socket.on('join', function(data) {
+    if (data.name in games) {
+      // Remove this user from any other game.
+      for (name in games) {
+        if (socket.id in games[name].users) {
+          delete games[name].users[socket.id];
+        }
+      }
+      // Add this user to the game they are joining.
+      games[data.name].users[socket.id] = new zombie.User({
+        sid: socket.id,
+        name: data.user,
+        lat: data.lat,
+        lng: data.lng
+      });
+      logger.log(logger.NOTICE, 'User ' + socket.id + ' joined ' + data.name);
+    }
+  });
+        
+  // A user is requesting to see a list of all games.
+  // TODO: Limit this to games in the same geographical area. 
+  socket.on('list', function(data) {
+    socket.emit('list', { games: Object.keys(games) });      
+  });
   
-  client.on('message', function(data) {
-    switch (data.action) {
-      // A user is creating a new game.
-      case 'create':
-        // Create the game.
-        var game = new zombie.Game(data);
-        
-        for (name in games) {
-          if (this.sessionId in games[name].users) {
-            delete games[name].users[this.sessionId];
-          }
-        }
-        
-        // Add the creator to the list of users.
-        game.users[this.sessionId] = new zombie.User({
-          sid: this.sessionId,
-          name: data.user,
-          lat: data.lat,
-          lng: data.lng
-        });
-        games[game.name] = game;
-        logger.log(logger.NOTICE, 'Game created: ' + game.name);
-        break;
-      
-      // A user is joining an existing game.
-      case 'join':
-        if (data.name in games) {
-          for (name in games) {
-            if (this.sessionId in games[name].users) {
-              delete games[name].users[this.sessionId];
-            }
-          }
-          games[data.name].users[this.sessionId] = new zombie.User({
-            sid: this.sessionId,
-            name: data.user,
-            lat: data.lat,
-            lng: data.lng
-          });
-          logger.log(logger.NOTICE, 'User ' + this.sessionId + ' joined ' + data.name);
-        }
-        break;
-      
-      // A user is requesting to see a list of all games.
-      // TODO: Limit this to games in the same geographical area. 
-      case 'list':
-        client.send({ action: 'list', games: Object.keys(games) });
-        break;
-      
-      // A user is updating their position within a game.
-      case 'ping':
-        if (data.game in games) {
-          games[data.game].users[this.sessionId].position(data.lat, data.lng);
-        }
-        break;
+  // A user is updating their position within a game.
+  socket.on('ping', function(data) {
+    if (data.game in games) {
+      games[data.game].users[socket.id].position(data.lat, data.lng);
     }
   });
   
-  client.on('disconnect', function(data) {
-    delete people[this.sessionId];
-    logger.log(logger.NOTICE, 'User ' + this.sessionId + ' disconnected');
+  // Get rid of disconnected users.
+  // INTERESTING THOUGHT: Turn them into zombies?!
+  socket.on('disconnect', function(data) {
+    for (name in games) {
+      if (socket.id in games[name].users) {
+        delete games[name].users[socket.id];
+      }
+    }
+    logger.log(logger.NOTICE, 'User ' + socket.id + ' disconnected');
   });
-  
 });
 
 // The game loop.
-setTimeout(function update() {
-  var toime = new Date;
-  
+setInterval(function update() {
   for (var name in games) {
     var game = games[name];
     
@@ -114,15 +111,7 @@ setTimeout(function update() {
     
     // Send the game state to all players.
     for (var sid in game.users) {
-      if (sid in people) {
-        people[sid].send({ action: 'update', state: state, sid: sid });
-      }
-      else {
-        // Get rid of disconnected users.
-        // INTERESTING THOUGHT: Turn them into zombies?!
-        delete game.users[sid];
-        logger.log(logger.NOTICE, 'User ' + sid + ' left ' + name);
-      }
+      io.sockets.socket(sid).emit('update', { state: state, sid: sid });
     }
     
     // Remove this game from the update queue if it's over.
@@ -131,12 +120,6 @@ setTimeout(function update() {
       delete games[name];
     }
   }
-  
-  // Compensate for loop processing time when firing next game update.
-  var duration = new Date - toime;
-  var interval = config.get('game.interval');
-  setTimeout(update, duration > interval ? 0 : interval - duration);
-  
 }, config.get('game.interval'));
 
 logger.log(logger.NOTICE, 
